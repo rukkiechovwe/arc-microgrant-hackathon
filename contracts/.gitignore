@@ -1,0 +1,7 @@
+deployments/default.json
+node_modules
+artifacts
+cache
+types
+coverage
+.env

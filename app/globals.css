@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@source not "../contracts";
+
+@theme inline {
+  --color-paper: #fbf7f1;
+  --color-card: #ffffff;
+  --color-ink: #2a221d;
+  --color-muted: #6f625a;
+  --color-line: #ebe2d6;
+  --color-accent: #b5553a;
+  --color-accent-dark: #93412b;
+  --color-accent-soft: #f6e4dc;
+  --color-sage: #4f6b57;
+  --color-sage-soft: #e3ece4;
+  --color-gold: #c79a3d;
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-fraunces);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-white hover:bg-accent-dark;
+}
+@utility btn-secondary {
+  @apply btn border border-line bg-card text-ink hover:bg-paper;
+}
+@utility btn-ghost {
+  @apply btn text-muted hover:text-ink;
+}
+@utility input {
+  @apply w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted/60 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-ink;
+}
+@utility card {
+  @apply rounded-3xl border border-line bg-card;
+}
