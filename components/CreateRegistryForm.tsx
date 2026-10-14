@@ -1,16 +1,17 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { parseEventLogs, type Hash } from "viem";
 import { useConfig, useConnection } from "wagmi";
 import { chain, explorerTx, MAX_GIFTS, MIN_AMOUNT, REGISTRY_ADDRESS } from "@/lib/config";
 import { friendlyError } from "@/lib/errors";
-import { formatNgn, formatUsdc, ngnToUsdcUnits, parseUsdcInput } from "@/lib/format";
+import { parseUsdcInput } from "@/lib/format";
 import { giftRegistryAbi } from "@/lib/giftRegistryAbi";
 import { hashMetadata, makeSlug, OCCASIONS, serializeMetadata, type Occasion, type RegistryMetadata } from "@/lib/metadata";
 import { sendContractTx } from "@/lib/tx";
-import { clearPendingMetadata, publishMetadata, savePendingMetadata } from "@/lib/useRegistry";
+import { clearPendingMetadata, myRegistriesKey, publishMetadata, savePendingMetadata } from "@/lib/useRegistry";
 import { ConnectButton, useMounted } from "./ConnectButton";
 
 type GiftDraft = { key: number; name: string; description: string; imageUrl: string; amount: string };
@@ -28,58 +29,46 @@ const emptyGift = (): GiftDraft => ({ key: nextKey++, name: "", description: "",
 export function CreateRegistryForm() {
   const mounted = useMounted();
   const config = useConfig();
+  const queryClient = useQueryClient();
   const { isConnected, chainId, address } = useConnection();
 
   const [displayName, setDisplayName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [occasion, setOccasion] = useState<Occasion>("wedding");
-  const [currency, setCurrency] = useState<"usdc" | "ngn">("usdc");
-  const [rate, setRate] = useState("");
   const [gifts, setGifts] = useState<GiftDraft[]>([emptyGift()]);
   const [formError, setFormError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const submitting = useRef(false);
 
-  const rateNum = Number(rate.replace(/,/g, ""));
-  const rateValid = rate.trim() !== "" && Number.isFinite(rateNum) && rateNum > 0;
   const busy = status.kind === "wallet" || status.kind === "pending" || status.kind === "saving";
-
-  function giftTarget(g: GiftDraft): { units: bigint | null; ngn: number | null } {
-    if (currency === "usdc") return { units: parseUsdcInput(g.amount), ngn: null };
-    const ngn = Number(g.amount.replace(/,/g, ""));
-    if (!rateValid || !Number.isFinite(ngn) || ngn <= 0) return { units: null, ngn: null };
-    return { units: ngnToUsdcUnits(ngn, rateNum), ngn };
-  }
 
   function build(): { metadata: RegistryMetadata; targets: bigint[] } | string {
     if (!address) return "Connect your wallet first.";
     if (!displayName.trim()) return "Please enter your name.";
     if (!title.trim()) return "Please give your registry a title.";
-    if (currency === "ngn" && !rateValid) return "Enter the exchange rate you want to use (₦ per 1 USDC).";
     const filled = gifts.filter((g) => g.name.trim() || g.amount.trim() || g.description.trim() || g.imageUrl.trim());
     const targets: bigint[] = [];
     const giftMeta: RegistryMetadata["gifts"] = [];
     for (const [i, g] of filled.entries()) {
       if (!g.name.trim()) return `Gift ${i + 1} needs a name.`;
-      const { units, ngn } = giftTarget(g);
+      const units = parseUsdcInput(g.amount);
       if (units === null || units < MIN_AMOUNT) return `"${g.name}" needs a target of at least 0.01 USDC.`;
       const img = g.imageUrl.trim();
       if (img && !/^https?:\/\/\S+$/.test(img)) return `The image link for "${g.name}" must start with https://`;
       targets.push(units);
-      giftMeta.push({ name: g.name.trim(), description: g.description.trim(), imageUrl: img, targetNgn: ngn });
+      giftMeta.push({ name: g.name.trim(), description: g.description.trim(), imageUrl: img });
     }
     return {
       targets,
       metadata: {
-        v: 2,
+        v: 3,
         owner: address.toLowerCase(),
         slug: makeSlug(title),
         displayName: displayName.trim(),
         title: title.trim(),
         description: description.trim(),
         occasion,
-        ngnPerUsdc: rateValid ? rateNum : null,
         gifts: giftMeta,
         createdAt: new Date().toISOString(),
       },
@@ -91,6 +80,7 @@ export function CreateRegistryForm() {
     try {
       await publishMetadata(id, json);
       clearPendingMetadata(hashMetadata(json));
+      queryClient.invalidateQueries({ queryKey: myRegistriesKey(address) });
       setStatus({ kind: "done", hash, id, slug: JSON.parse(json).slug });
     } catch (e) {
       setStatus({ kind: "saveFailed", hash, id, json, error: friendlyError(e) });
@@ -160,32 +150,12 @@ export function CreateRegistryForm() {
       </fieldset>
 
       <fieldset disabled={busy} className="card space-y-4 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
           <h2 className="font-display text-xl font-semibold">Gifts</h2>
-          <div className="flex rounded-full border border-line p-1 text-sm">
-            {(["usdc", "ngn"] as const).map((c) => (
-              <button key={c} type="button" onClick={() => setCurrency(c)}
-                className={`rounded-full px-3 py-1 ${currency === c ? "bg-ink text-white" : "text-muted"}`}>
-                Price in {c === "usdc" ? "USDC" : "Naira"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-paper p-4 text-sm text-muted">
-          <label className="label" htmlFor="rate">
-            Exchange rate: ₦ per 1 USDC{" "}
-            <span className="font-normal text-muted">{currency === "ngn" ? "(required)" : "(optional, to show naira equivalents)"}</span>
-          </label>
-          <input id="rate" className="input max-w-48" inputMode="decimal" placeholder="e.g. 1500" value={rate} onChange={(e) => setRate(e.target.value)} />
-          <p className="mt-2 text-xs">
-            Guests always pay in USDC. Targets are stored onchain in USDC. Naira figures are only shown as a guide, at
-            the rate you enter here, and nothing is converted to naira automatically.
-          </p>
+          <p className="mt-1 text-sm text-muted">Set each target in USDC (1 USDC ≈ US$1). Guests contribute in USDC too.</p>
         </div>
 
         {gifts.map((g, i) => {
-          const t = giftTarget(g);
           return (
             <div key={g.key} className="space-y-3 rounded-2xl border border-line p-4">
               <div className="flex items-center justify-between">
@@ -196,18 +166,9 @@ export function CreateRegistryForm() {
               </div>
               <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
                 <input className="input" maxLength={80} placeholder="Gift name, e.g. Refrigerator" value={g.name} onChange={(e) => updateGift(g.key, { name: e.target.value })} />
-                <div>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-muted">{currency === "usdc" ? "$" : "₦"}</span>
-                    <input className="input pl-7" inputMode="decimal" placeholder={currency === "usdc" ? "Target USDC" : "Target naira"} value={g.amount} onChange={(e) => updateGift(g.key, { amount: e.target.value })} />
-                  </div>
-                  {t.units !== null && (
-                    <p className="mt-1 text-xs text-muted">
-                      {currency === "ngn"
-                        ? `= ${formatUsdc(t.units, { decimals: 2 })} USDC`
-                        : rateValid ? `≈ ${formatNgn(Number(t.units) / 1e6 * rateNum)}` : null}
-                    </p>
-                  )}
+                <div className="relative">
+                  <input className="input pr-14" inputMode="decimal" placeholder="Target" value={g.amount} onChange={(e) => updateGift(g.key, { amount: e.target.value })} />
+                  <span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-sm text-muted">USDC</span>
                 </div>
               </div>
               <input className="input" maxLength={500} placeholder="Short description (optional)" value={g.description} onChange={(e) => updateGift(g.key, { description: e.target.value })} />
@@ -288,7 +249,10 @@ function Created({ slug, hash }: { slug: string; hash: Hash }) {
         </button>
       </div>
       <div className="flex flex-col items-center gap-2">
-        <Link href={`/r/${slug}`} className="btn-primary">View registry</Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link href={`/dashboard?r=${slug}`} className="btn-primary">Go to your dashboard</Link>
+          <Link href={`/r/${slug}`} className="btn-secondary">View as a guest</Link>
+        </div>
         <TxLink hash={hash} />
       </div>
     </div>

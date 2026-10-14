@@ -5,7 +5,7 @@ import { erc20Abi, isAddressEqual, parseEventLogs, type Hash } from "viem";
 import { useConfig, useConnection, useReadContract } from "wagmi";
 import { chain, explorerAddress, explorerTx, MIN_AMOUNT, REGISTRY_ADDRESS, USDC_ADDRESS } from "@/lib/config";
 import { friendlyError } from "@/lib/errors";
-import { formatNgn, formatUsdc, parseUsdcInput, shortAddress, usdcToNgn } from "@/lib/format";
+import { formatUsdc, parseUsdcInput, shortAddress } from "@/lib/format";
 import { giftRegistryAbi } from "@/lib/giftRegistryAbi";
 import type { RegistryMetadata } from "@/lib/metadata";
 import { sendContractTx } from "@/lib/tx";
@@ -59,7 +59,6 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
   }, [busy, onClose]);
 
   const amount = parseUsdcInput(input);
-  const rate = metadata.ngnPerUsdc;
   let amountError: string | null = null;
   if (input && amount === null) amountError = "Enter an amount like 25 or 12.50";
   else if (amount !== null && amount < MIN_AMOUNT) amountError = "The minimum is 0.01 USDC";
@@ -151,8 +150,7 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
                 <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-muted">USDC</span>
               </div>
               <div className="mt-1.5 flex justify-between gap-2 text-xs text-muted">
-                <span>{amountError ? <span className="text-accent-dark">{amountError}</span>
-                  : amount && rate ? `≈ ${formatNgn(usdcToNgn(amount, rate))} at the owner's rate` : "1 USDC ≈ US$1"}</span>
+                <span>{amountError ? <span className="text-accent-dark">{amountError}</span> : "1 USDC ≈ US$1"}</span>
                 {target.remaining !== null && (
                   <button type="button" className="underline" disabled={busy} onClick={() => setInput(formatUsdc(target.remaining!, { decimals: 2 }).replace(/,/g, ""))}>
                     Remaining: {formatUsdc(target.remaining, { decimals: 2 })}

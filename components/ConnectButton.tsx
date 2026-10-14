@@ -12,7 +12,13 @@ export function useMounted() {
   return useSyncExternalStore(subscribe, () => true, () => false);
 }
 
-export function ConnectButton({ className = "" }: { className?: string }) {
+/**
+ * `tone="dark"` is for dark backgrounds (the landing hero and its header), and `outline` makes
+ * it a secondary button there. `label` overrides the call to action.
+ */
+export function ConnectButton({ className = "", tone = "light", outline = false, label = "Connect wallet", buttonClassName = "" }: {
+  className?: string; tone?: "light" | "dark"; outline?: boolean; label?: string; buttonClassName?: string;
+}) {
   const mounted = useMounted();
   const { address, chainId, isConnected } = useConnection();
   const connectors = useConnectors();
@@ -20,6 +26,11 @@ export function ConnectButton({ className = "" }: { className?: string }) {
   const disconnect = useDisconnect();
   const switchChain = useSwitchChain();
   const [error, setError] = useState<string | null>(null);
+  const dark = tone === "dark";
+  const action = `${dark
+    ? outline ? "btn border border-white/30 text-paper hover:bg-white/10" : "btn bg-paper text-ink hover:bg-white"
+    : outline ? "btn-secondary" : "btn-primary"} ${buttonClassName}`;
+  const errorText = `mt-1 max-w-64 text-right text-xs ${dark ? "text-accent-soft" : "text-accent-dark"}`;
 
   if (!mounted) return <div className={`h-10 w-36 ${className}`} />;
 
@@ -28,7 +39,7 @@ export function ConnectButton({ className = "" }: { className?: string }) {
     return (
       <div className={`flex flex-col items-end ${className}`}>
         <button
-          className="btn-primary"
+          className={action}
           disabled={connect.isPending}
           onClick={async () => {
             setError(null);
@@ -43,9 +54,9 @@ export function ConnectButton({ className = "" }: { className?: string }) {
             }
           }}
         >
-          {connect.isPending ? "Connecting…" : "Connect wallet"}
+          {connect.isPending ? "Connecting…" : label}
         </button>
-        {error && <p className="mt-1 max-w-64 text-right text-xs text-accent-dark">{error}</p>}
+        {error && <p className={errorText}>{error}</p>}
       </div>
     );
   }
@@ -54,7 +65,7 @@ export function ConnectButton({ className = "" }: { className?: string }) {
     return (
       <div className={`flex flex-col items-end ${className}`}>
         <button
-          className="btn-primary"
+          className={action}
           disabled={switchChain.isPending}
           onClick={async () => {
             setError(null);
@@ -67,14 +78,14 @@ export function ConnectButton({ className = "" }: { className?: string }) {
         >
           {switchChain.isPending ? "Switching…" : `Switch to ${chain.name}`}
         </button>
-        {error && <p className="mt-1 max-w-64 text-right text-xs text-accent-dark">{error}</p>}
+        {error && <p className={errorText}>{error}</p>}
       </div>
     );
   }
 
   return (
     <button
-      className={`btn-secondary ${className}`}
+      className={`${dark ? "btn border border-white/20 bg-white/5 text-paper hover:bg-white/10" : "btn-secondary"} ${className}`}
       title="Disconnect"
       onClick={() => disconnect.mutate({})}
     >

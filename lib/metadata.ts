@@ -16,8 +16,6 @@ const giftSchema = z.object({
   name: z.string().trim().min(1, "Gift name is required").max(80),
   description: z.string().trim().max(500),
   imageUrl: z.union([z.literal(""), z.httpUrl().max(1000)]),
-  /** Naira figure the owner entered, if they priced the gift in naira. Display only. */
-  targetNgn: z.number().positive().nullable(),
 });
 
 /** Link slug: readable title part + "-" + 12 random hex chars, e.g. "ada-and-tunde-2274681a67cd". */
@@ -28,7 +26,11 @@ export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{12}$/;
  * source of truth for amounts. `gifts[i]` describes onchain gift id `i`.
  */
 export const registryMetadataSchema = z.object({
-  v: z.literal(2),
+  /**
+   * v3 is current. v2 registries also carried naira display fields (`ngnPerUsdc`, `targetNgn`);
+   * those are unknown keys now and get stripped on parse, while the hash still covers the raw JSON.
+   */
+  v: z.union([z.literal(2), z.literal(3)]),
   /** Owner wallet (lowercase). Binding it into the hash stops copycats reusing the details. */
   owner: z.string().regex(/^0x[0-9a-f]{40}$/, "Invalid owner address"),
   /** Shareable link id, also bound into the hash so nobody can change or claim it. */
@@ -37,8 +39,6 @@ export const registryMetadataSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(100),
   description: z.string().trim().max(2000),
   occasion: z.enum(Object.keys(OCCASIONS) as [Occasion, ...Occasion[]]),
-  /** Owner-stated naira per 1 USDC, used only to show naira equivalents. */
-  ngnPerUsdc: z.number().positive().max(10_000_000).nullable(),
   gifts: z.array(giftSchema).max(50),
   createdAt: z.iso.datetime(),
 });

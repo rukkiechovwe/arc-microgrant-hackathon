@@ -21,8 +21,8 @@ const post = (path, body) => fetch(APP + path, { method: "POST", headers: { "con
 const wait = async (h) => pub.waitForTransactionReceipt({ hash: h });
 
 const slug = `ada-and-tundes-wedding-${Date.now().toString(16).padStart(12, "0").slice(-12)}`;
-const meta = { v: 2, owner: owner.account.address.toLowerCase(), slug, displayName: "Ada & Tunde", title: "Ada & Tunde's Wedding", description: "Thank you!", occasion: "wedding", ngnPerUsdc: 1500,
-  gifts: [{ name: "Refrigerator", description: "Double door", imageUrl: "", targetNgn: 1500000 }, { name: "Blender", description: "", imageUrl: "", targetNgn: null }],
+const meta = { v: 3, owner: owner.account.address.toLowerCase(), slug, displayName: "Ada & Tunde", title: "Ada & Tunde's Wedding", description: "Thank you!", occasion: "wedding",
+  gifts: [{ name: "Refrigerator", description: "Double door", imageUrl: "" }, { name: "Blender", description: "", imageUrl: "" }],
   createdAt: new Date().toISOString() };
 const json = JSON.stringify(meta);
 const hash = keccak256(stringToHex(json));

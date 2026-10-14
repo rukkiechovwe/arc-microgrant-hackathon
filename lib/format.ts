@@ -18,20 +18,6 @@ export function parseUsdcInput(input: string): bigint | null {
   }
 }
 
-/** USDC base units for a naira amount at a rate, rounded up to the nearest cent. */
-export function ngnToUsdcUnits(ngn: number, ngnPerUsdc: number): bigint {
-  const cents = Math.ceil((ngn / ngnPerUsdc) * 100 - 1e-9);
-  return BigInt(cents) * 10_000n;
-}
-
-export function formatNgn(amount: number): string {
-  return "₦" + Math.round(amount).toLocaleString("en-US");
-}
-
-export function usdcToNgn(amount: bigint, ngnPerUsdc: number): number {
-  return Number(formatUnits(amount, USDC_DECIMALS)) * ngnPerUsdc;
-}
-
 export function shortAddress(a: Address | string): string {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }

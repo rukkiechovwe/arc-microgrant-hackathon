@@ -1,13 +1,53 @@
+import { isAddress } from "viem";
 import { z } from "zod";
 import { hashMetadata, parseMetadataJson } from "@/lib/metadata";
 import { readOnchainRegistry } from "@/lib/server/chain";
-import { jsonError, registryKey, serverError } from "@/lib/server/api";
+import { jsonError, ownerKey, registryKey, serverError } from "@/lib/server/api";
 import { getStore, SlugTakenError } from "@/lib/server/store";
 
 const bodySchema = z.object({
   registryId: z.string().regex(/^\d{1,15}$/),
   metadataJson: z.string().max(100_000),
 });
+
+/**
+ * Registries owned by a wallet: `GET /api/registries?owner=0x…`. The stored owner is only an
+ * index, so each match is re-checked against the current onchain owner. A row that went stale
+ * (ownership moved on) is corrected and left out.
+ */
+export async function GET(request: Request) {
+  try {
+    const owner = new URL(request.url).searchParams.get("owner")?.trim() ?? "";
+    if (!isAddress(owner)) return jsonError(400, "Invalid owner address");
+
+    const store = getStore();
+    const rows = await store.listRegistriesByOwner(ownerKey(owner));
+    const checked = await Promise.all(
+      rows.map(async (row) => {
+        const onchain = await readOnchainRegistry(BigInt(row.registry_id));
+        const current = onchain?.owner.toLowerCase();
+        if (current && current !== row.owner) await store.setRegistryOwner(registryKey(BigInt(row.registry_id)), current);
+        return current === owner.toLowerCase() ? row : null;
+      }),
+    );
+
+    return Response.json(
+      {
+        registries: checked
+          .filter((r) => r !== null)
+          .map((r) => ({
+            registryId: String(r.registry_id),
+            slug: r.slug,
+            metadataJson: r.metadata_json,
+            createdAt: r.created_at ?? null,
+          })),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (e) {
+    return serverError(e);
+  }
+}
 
 /**
  * Publishes a registry's offchain details. No login needed: the details are only accepted

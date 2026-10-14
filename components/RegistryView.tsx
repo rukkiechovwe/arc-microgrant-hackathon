@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { isAddressEqual } from "viem";
 import { useConnection } from "wagmi";
 import { explorerAddress, GENERAL_FUND, REGISTRY_ADDRESS } from "@/lib/config";
-import { formatNgn, formatUsdc, shortAddress, usdcToNgn } from "@/lib/format";
+import { formatUsdc, shortAddress } from "@/lib/format";
 import { OCCASIONS, SLUG_PATTERN, type RegistryMetadata } from "@/lib/metadata";
 import {
   clearPendingMetadata,
   loadPendingMetadata,
   metadataMatchesChain,
+  myRegistriesKey,
   publishMetadata,
+  syncRegistryOwner,
   useContributionNotes,
   useOnchainRegistry,
   useRegistryMetadata,
@@ -22,7 +25,7 @@ import { friendlyError } from "@/lib/errors";
 import { useMounted } from "./ConnectButton";
 import { ContributeDialog, type ContributeTarget } from "./ContributeDialog";
 import { ContributionsList } from "./ContributionsList";
-import { OwnerPanel, PendingOwnerBanner } from "./OwnerPanel";
+import { PendingOwnerBanner } from "./OwnerPanel";
 import { ProgressBar } from "./ProgressBar";
 
 export function RegistryView() {
@@ -38,6 +41,7 @@ export function RegistryView() {
   const notes = useContributionNotes(id);
   const { address } = useConnection();
   const mounted = useMounted();
+  const queryClient = useQueryClient();
   const [target, setTarget] = useState<ContributeTarget | null>(null);
 
   // Show the canonical slug link in the address bar when opened by number.
@@ -71,7 +75,6 @@ export function RegistryView() {
     return <MissingDetails id={id} isOwner={isOwner} hash={registry.metadataHash} tampered={!!meta.data && !metaVerified} onPublished={() => meta.refetch()} />;
   }
 
-  const rate = metadata.ngnPerUsdc;
   const funded = targets.filter((t, i) => raised[i] >= t).length;
 
   return (
@@ -96,12 +99,27 @@ export function RegistryView() {
           This registry is closed. {metadata.displayName} is no longer accepting gifts here. Thank you for your kindness!
         </p>
       )}
-      {isPendingOwner && <PendingOwnerBanner registryId={id} onDone={() => onchain.refetch()} />}
-      {isOwner && <OwnerPanel registryId={id} registry={registry} onDone={() => onchain.refetch()} />}
+      {isPendingOwner && (
+        <PendingOwnerBanner registryId={id} onDone={async () => {
+          onchain.refetch();
+          await syncRegistryOwner(id);
+          queryClient.invalidateQueries({ queryKey: myRegistriesKey(address) });
+        }} />
+      )}
+      {isOwner && (
+        <div className="mt-8 flex flex-col gap-3 rounded-3xl border border-sage/30 bg-sage-soft/50 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm">
+            <strong>This is your registry.</strong> <span className="text-muted">Guests see this page without this note.</span>
+          </p>
+          <Link href={`/dashboard?r=${metadata.slug}`} className="btn-primary bg-sage hover:bg-sage/90">
+            Manage &amp; withdraw
+          </Link>
+        </div>
+      )}
 
       <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {targets.map((t, i) => (
-          <GiftCard key={i} gift={metadata.gifts[i]} target={t} raised={raised[i]} rate={rate} closed={closed}
+          <GiftCard key={i} gift={metadata.gifts[i]} target={t} raised={raised[i]} closed={closed}
             onContribute={() => setTarget({ giftId: BigInt(i), name: metadata.gifts[i].name, remaining: t - raised[i] })} />
         ))}
         <div className="card flex flex-col bg-gradient-to-br from-accent-soft/60 to-card p-6">
@@ -117,7 +135,7 @@ export function RegistryView() {
 
       <ContributionsList notes={notes.data} isLoading={notes.isPending} gifts={metadata.gifts} />
 
-      <DataSources owner={registry.owner} rate={rate} />
+      <DataSources owner={registry.owner} />
 
       {target && (
         <ContributeDialog registryId={id} target={target} metadata={metadata}
@@ -128,8 +146,8 @@ export function RegistryView() {
   );
 }
 
-function GiftCard({ gift, target, raised, rate, closed, onContribute }: {
-  gift: RegistryMetadata["gifts"][number]; target: bigint; raised: bigint; rate: number | null; closed: boolean; onContribute: () => void;
+function GiftCard({ gift, target, raised, closed, onContribute }: {
+  gift: RegistryMetadata["gifts"][number]; target: bigint; raised: bigint; closed: boolean; onContribute: () => void;
 }) {
   const complete = raised >= target;
   return (
@@ -153,9 +171,6 @@ function GiftCard({ gift, target, raised, rate, closed, onContribute }: {
           <p className="mt-2 text-sm">
             <strong>{formatUsdc(raised, { decimals: 2 })}</strong> <span className="text-muted">of {formatUsdc(target, { decimals: 2 })} USDC</span>
           </p>
-          {rate && (
-            <p className="text-xs text-muted">≈ {formatNgn(gift.targetNgn ?? usdcToNgn(target, rate))} at the owner&apos;s rate</p>
-          )}
           <button className="btn-primary mt-4 w-full" disabled={complete || closed} onClick={onContribute}>
             {complete ? "Fully funded, thank you!" : closed ? "Registry closed" : "Contribute"}
           </button>
@@ -186,7 +201,7 @@ function ShareButton({ slug }: { slug: string }) {
   );
 }
 
-function DataSources({ owner, rate }: { owner: `0x${string}`; rate: number | null }) {
+function DataSources({ owner }: { owner: `0x${string}` }) {
   const contractUrl = REGISTRY_ADDRESS ? explorerAddress(REGISTRY_ADDRESS) : null;
   const ownerUrl = explorerAddress(owner);
   return (
@@ -195,8 +210,7 @@ function DataSources({ owner, rate }: { owner: `0x${string}`; rate: number | nul
       <ul className="mt-3 list-disc space-y-1.5 pl-5">
         <li><strong className="text-ink">Amounts, targets and progress</strong> are read live from the Arc blockchain. They only change when a transaction is confirmed.</li>
         <li><strong className="text-ink">Names, descriptions and images</strong> are stored in this app&apos;s database. Their fingerprint matches the one saved on the blockchain when the registry was created ✓.</li>
-        <li>Gifts are sent in <strong className="text-ink">USDC</strong>. Only the registry owner&apos;s wallet can withdraw, at any time.
-          {rate ? ` Naira amounts use the owner's stated rate of ₦${rate.toLocaleString("en-US")} per USDC and are only a guide.` : ""}</li>
+        <li>Gifts are sent in <strong className="text-ink">USDC</strong>. Only the registry owner&apos;s wallet can withdraw, at any time.</li>
       </ul>
       <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs">
         {contractUrl && <a className="underline hover:text-ink" href={contractUrl} target="_blank" rel="noreferrer">Registry contract on Arc explorer</a>}

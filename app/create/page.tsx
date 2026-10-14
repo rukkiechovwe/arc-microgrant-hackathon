@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CreateRegistryForm } from "@/components/CreateRegistryForm";
 
-export const metadata: Metadata = { title: "Create a registry · Gift Registry on Arc" };
+export const metadata: Metadata = { title: "Create a registry · Your Wish" };
 
 export default function CreatePage() {
   return (

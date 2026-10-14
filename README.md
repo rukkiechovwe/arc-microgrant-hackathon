@@ -79,7 +79,7 @@ Security review: `contracts/test/SecurityReview.ts` runs a randomized test of 30
 | Data | Where | Trust |
 |---|---|---|
 | Owner, gift targets, amounts raised, amounts withdrawn | Contract | Source of truth, read live by the browser |
-| Title, names, descriptions, image links, naira rate | Supabase `registries.metadata_json` | Verified by hash |
+| Title, names, descriptions, image links | Supabase `registries.metadata_json` | Verified by hash |
 | Contributor name and note | Supabase `contributions` | Amount, gift and sender come from the verified tx receipt; name and note are self-reported |
 
 1. The browser serializes the registry details to JSON, computes `keccak256(json)`, and sends `createRegistry(hash, targets)`. The details include the **owner wallet** and the **link slug**, so both are covered by the onchain hash.
@@ -95,10 +95,7 @@ Security review: `contracts/test/SecurityReview.ts` runs a randomized test of 30
 
 ### Currency
 
-Targets are stored and contributed **in USDC**. Owners can optionally enter a naira-per-USDC rate:
-- If they price gifts in naira, each target is converted to USDC at that rate (rounded up to the cent) before it's stored onchain.
-- Naira figures are always labelled as "at the owner's rate".
-- The app doesn't convert to naira, and it doesn't buy or deliver physical gifts.
+Everything is priced, stored and contributed **in USDC** (1 USDC ≈ US$1). There are no local-currency conversions, and the app doesn't buy or deliver physical gifts.
 
 ### Registry links
 

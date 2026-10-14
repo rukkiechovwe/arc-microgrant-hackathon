@@ -13,6 +13,10 @@ export function slugKey(slug: string) {
   return { chain_id: chain.id, contract_address: requireRegistryAddress().toLowerCase(), slug };
 }
 
+export function ownerKey(owner: string) {
+  return { chain_id: chain.id, contract_address: requireRegistryAddress().toLowerCase(), owner: owner.toLowerCase() };
+}
+
 export function parseRegistryId(raw: string): bigint | null {
   if (!/^\d{1,15}$/.test(raw)) return null;
   const id = BigInt(raw);

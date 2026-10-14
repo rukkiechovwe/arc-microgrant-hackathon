@@ -3,18 +3,20 @@ import { formatUsdc, shortAddress } from "@/lib/format";
 import type { RegistryMetadata } from "@/lib/metadata";
 import type { ContributionNote } from "@/lib/useRegistry";
 
-export function ContributionsList({ notes, isLoading, gifts }: {
-  notes: ContributionNote[] | undefined; isLoading: boolean; gifts: RegistryMetadata["gifts"];
+export function ContributionsList({
+  notes, isLoading, gifts, title = "Gifts received", emptyText = "No gifts yet. Be the first to contribute!",
+}: {
+  notes: ContributionNote[] | undefined; isLoading: boolean; gifts: RegistryMetadata["gifts"]; title?: string; emptyText?: string;
 }) {
   return (
     <section className="mt-14">
-      <h2 className="font-display text-2xl font-semibold">Gifts received</h2>
+      <h2 className="font-display text-2xl font-semibold">{title}</h2>
       <p className="mt-1 text-sm text-muted">Each entry is checked against its confirmed Arc transaction. Names and notes are written by the giver.</p>
       {isLoading ? (
         <p className="mt-6 text-sm text-muted">Loading…</p>
       ) : !notes?.length ? (
         <p className="mt-6 rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
-          No gifts yet. Be the first to contribute!
+          {emptyText}
         </p>
       ) : (
         <ul className="mt-6 divide-y divide-line rounded-3xl border border-line bg-card">

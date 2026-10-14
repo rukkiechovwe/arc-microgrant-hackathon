@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ContractFunctionReturnType } from "viem";
-import { useReadContract } from "wagmi";
+import type { Address, ContractFunctionReturnType } from "viem";
+import { useConnection, useReadContract } from "wagmi";
 import { chain, REGISTRY_ADDRESS } from "./config";
 import { giftRegistryAbi } from "./giftRegistryAbi";
 import { hashMetadata, parseMetadataJson, type RegistryMetadata } from "./metadata";
@@ -45,6 +45,44 @@ export function useRegistryMetadata(key: string) {
       return { registryId: BigInt(registryId), slug, json: metadataJson, metadata: parseMetadataJson(metadataJson) };
     },
   });
+}
+
+export const myRegistriesKey = (address: string | undefined) => ["my-registries", address?.toLowerCase()];
+
+/**
+ * Registries the given wallet currently owns (checked onchain by the API), newest first.
+ * Details are returned unverified; callers that display them re-check the hash.
+ */
+export function useRegistriesOwnedBy(address: Address | undefined) {
+  return useQuery({
+    enabled: !!address && !!REGISTRY_ADDRESS,
+    queryKey: myRegistriesKey(address),
+    queryFn: async (): Promise<RegistryDetails[]> => {
+      const res = await fetch(`/api/registries?owner=${address}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Could not load your registries");
+      const { registries } = (await res.json()) as { registries: { registryId: string; slug: string; metadataJson: string }[] };
+      return registries.flatMap((r) => {
+        try {
+          return [{ registryId: BigInt(r.registryId), slug: r.slug, json: r.metadataJson, metadata: parseMetadataJson(r.metadataJson) }];
+        } catch {
+          return [];
+        }
+      });
+    },
+    staleTime: 30_000,
+  });
+}
+
+/** The connected wallet's registries. `hasRegistry` is false until loaded. */
+export function useMyRegistries() {
+  const { address, isConnected } = useConnection();
+  const query = useRegistriesOwnedBy(isConnected ? address : undefined);
+  return { ...query, address: isConnected ? address : undefined, hasRegistry: (query.data?.length ?? 0) > 0 };
+}
+
+/** Points the stored owner at the current onchain owner (after an ownership transfer). */
+export async function syncRegistryOwner(registryId: bigint) {
+  await fetch(`/api/registries/${registryId}/owner`, { method: "POST" }).catch(() => {});
 }
 
 export function useContributionNotes(id: bigint | null) {

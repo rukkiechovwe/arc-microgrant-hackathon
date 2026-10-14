@@ -34,6 +34,7 @@ export type ContributionRow = {
 
 type Key = { chain_id: number; contract_address: string; registry_id: number };
 type SlugKey = { chain_id: number; contract_address: string; slug: string };
+type OwnerKey = { chain_id: number; contract_address: string; owner: string };
 
 /** Thrown when a different registry already uses the requested link. */
 export class SlugTakenError extends Error {
@@ -50,6 +51,10 @@ export interface Store {
    * (e.g. a local chain was reset), because callers verify the hash against the chain first.
    */
   saveRegistry(row: RegistryRow): Promise<void>;
+  /** Registries whose stored owner (lowercase) matches, newest first. */
+  listRegistriesByOwner(key: OwnerKey): Promise<RegistryRow[]>;
+  /** Updates the stored owner after an onchain ownership transfer. No-op if the row doesn't exist. */
+  setRegistryOwner(key: Key, owner: string): Promise<void>;
   listContributions(key: Key): Promise<ContributionRow[]>;
   insertContributions(rows: ContributionRow[]): Promise<void>;
 }
@@ -74,6 +79,22 @@ class SupabaseStore implements Store {
       .from("registries")
       .upsert(row, { onConflict: "chain_id,contract_address,registry_id" });
     if (error?.code === "23505") throw new SlugTakenError(); // unique slug index
+    if (error) throw new Error(`Database error: ${error.message}`);
+  }
+
+  async listRegistriesByOwner(key: OwnerKey) {
+    const { data, error } = await this.db
+      .from("registries")
+      .select("*")
+      .match(key)
+      .order("registry_id", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(`Database error: ${error.message}`);
+    return data as RegistryRow[];
+  }
+
+  async setRegistryOwner(key: Key, owner: string) {
+    const { error } = await this.db.from("registries").update({ owner }).match(key);
     if (error) throw new Error(`Database error: ${error.message}`);
   }
 
@@ -138,6 +159,20 @@ class FileStore implements Store {
     if (clash) throw new SlugTakenError();
     data.registries = data.registries.filter((r) => !FileStore.same(r, row));
     data.registries.push({ ...row, created_at: new Date().toISOString() });
+    await this.save(data);
+  }
+
+  async listRegistriesByOwner(key: OwnerKey) {
+    return (await this.load()).registries
+      .filter((r) => r.chain_id === key.chain_id && r.contract_address === key.contract_address && r.owner === key.owner)
+      .sort((a, b) => b.registry_id - a.registry_id);
+  }
+
+  async setRegistryOwner(key: Key, owner: string) {
+    const data = await this.load();
+    const row = data.registries.find((r) => FileStore.same(r, key));
+    if (!row) return;
+    row.owner = owner;
     await this.save(data);
   }
 
