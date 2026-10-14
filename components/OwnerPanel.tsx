@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { getAddress, isAddress, zeroAddress, type Hash } from "viem";
 import { useConfig } from "wagmi";
-import { explorerTx, REGISTRY_ADDRESS } from "@/lib/config";
+import { explorerTx, REGISTRY_ADDRESS, USDC_ADDRESS } from "@/lib/config";
 import { friendlyError } from "@/lib/errors";
 import { formatUsdc, shortAddress } from "@/lib/format";
 import { giftRegistryAbi } from "@/lib/giftRegistryAbi";
@@ -77,7 +77,10 @@ export function OwnerPanel({ registryId, registry, onDone }: { registryId: bigin
   const hasPending = registry.pendingOwner !== zeroAddress;
   const address = REGISTRY_ADDRESS!;
 
-  const recipientValid = isAddress(recipient.trim()) && recipient.trim() !== zeroAddress;
+  // The contract also rejects these: the registry itself and the USDC contract can't receive withdrawals.
+  const recipientForbidden =
+    isAddress(recipient.trim()) && [zeroAddress, address, USDC_ADDRESS].some((a) => getAddress(recipient.trim()) === getAddress(a));
+  const recipientValid = isAddress(recipient.trim()) && !recipientForbidden;
   const newOwnerValid =
     isAddress(newOwner.trim()) && newOwner.trim() !== zeroAddress && getAddress(newOwner.trim()) !== getAddress(registry.owner);
 
@@ -144,6 +147,9 @@ export function OwnerPanel({ registryId, registry, onDone }: { registryId: bigin
           <label className="label" htmlFor="recipient">Send all available USDC to</label>
           <input id="recipient" className="input font-mono text-sm" placeholder="0x…" value={recipient}
             disabled={busy} onChange={(e) => setRecipient(e.target.value)} />
+          {recipientForbidden && (
+            <p className="text-xs text-accent-dark">That address can&apos;t receive withdrawals. Use a personal wallet address.</p>
+          )}
           <p className="text-xs text-muted">
             Use this if your own wallet can&apos;t receive USDC. Double-check the address: transfers can&apos;t be reversed.
           </p>

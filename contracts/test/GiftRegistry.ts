@@ -73,6 +73,11 @@ describe("GiftRegistry", async () => {
       await assert.rejects(viem.deployContract("GiftRegistry", [zeroAddress, recovery.account.address]), /InvalidToken/);
       // An address with no contract code (a plain wallet) is not a token.
       await assert.rejects(viem.deployContract("GiftRegistry", [alice.account.address, recovery.account.address]), /InvalidToken/);
+      // A contract that isn't a token at all, and one whose decimals() reverts.
+      const notToken = await viem.deployContract("GiftRegistry", [token.address, recovery.account.address]);
+      await assert.rejects(viem.deployContract("GiftRegistry", [notToken.address, recovery.account.address]), /InvalidToken/);
+      const reverting = await viem.deployContract("RevertingDecimalsToken");
+      await assert.rejects(viem.deployContract("GiftRegistry", [reverting.address, recovery.account.address]), /InvalidToken/);
       const e18 = await viem.deployContract("EighteenDecimalToken");
       await assert.rejects(viem.deployContract("GiftRegistry", [e18.address, recovery.account.address]), /InvalidToken/);
       await assert.rejects(viem.deployContract("GiftRegistry", [token.address, zeroAddress]), /InvalidRecoveryAddress/);
@@ -279,6 +284,17 @@ describe("GiftRegistry", async () => {
         "NotOwner",
       );
       await viem.assertions.revertWithCustomError(registry.write.withdrawTo([1n, zeroAddress]), registry, "InvalidRecipient");
+    });
+
+    it("rejects the registry contract and the token contract as recipients", async () => {
+      const { token, registry } = await networkHelpers.loadFixture(deployFixture);
+      await registry.write.contribute([1n, 0n, usdc("10")], { account: alice.account });
+      // Sending to the registry itself would turn owed funds into recoverable "excess".
+      await viem.assertions.revertWithCustomError(registry.write.withdrawTo([1n, registry.address]), registry, "InvalidRecipient");
+      // Sending to the token contract would strand the funds there.
+      await viem.assertions.revertWithCustomError(registry.write.withdrawTo([1n, token.address]), registry, "InvalidRecipient");
+      assert.equal(await registry.read.totalOwed(), usdc("10"));
+      assert.equal(await registry.read.excessBalance(), 0n);
     });
   });
 

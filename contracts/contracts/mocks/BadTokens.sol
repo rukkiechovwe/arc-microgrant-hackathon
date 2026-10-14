@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.37;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -128,5 +128,12 @@ contract BlocklistToken is ERC20 {
     function _update(address from, address to, uint256 value) internal override {
         require(!blocked[from] && !blocked[to], "Blocklisted");
         super._update(from, to, value);
+    }
+}
+
+/// @dev Test-only contract whose decimals() reverts, to test the constructor's try/catch.
+contract RevertingDecimalsToken {
+    function decimals() external pure returns (uint8) {
+        revert("no metadata");
     }
 }

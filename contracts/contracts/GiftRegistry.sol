@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.37;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -89,7 +89,12 @@ contract GiftRegistry is ReentrancyGuard {
     ///      prove the token is Circle's USDC - the deploy script checks the documented address.
     constructor(IERC20 usdc_, address recoveryAddress_) {
         if (address(usdc_).code.length == 0) revert InvalidToken();
-        if (IERC20Metadata(address(usdc_)).decimals() != 6) revert InvalidToken();
+        // A contract without (or with a reverting) decimals() fails with a clear InvalidToken.
+        try IERC20Metadata(address(usdc_)).decimals() returns (uint8 tokenDecimals) {
+            if (tokenDecimals != 6) revert InvalidToken();
+        } catch {
+            revert InvalidToken();
+        }
         if (recoveryAddress_ == address(0)) revert InvalidRecoveryAddress();
         usdc = usdc_;
         recoveryAddress = recoveryAddress_;
@@ -157,8 +162,10 @@ contract GiftRegistry is ReentrancyGuard {
 
     /// @notice Withdraw all available funds to another address chosen by the owner, e.g. if
     ///         the owner's own address can no longer receive USDC (blocklisted).
+    /// @dev Rejects this contract (the funds would become recoverable "excess") and the token
+    ///      contract itself (the funds would be stranded there).
     function withdrawTo(uint256 registryId, address to) external nonReentrant {
-        if (to == address(0)) revert InvalidRecipient();
+        if (to == address(0) || to == address(this) || to == address(usdc)) revert InvalidRecipient();
         _withdraw(registryId, to);
     }
 

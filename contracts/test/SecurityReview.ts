@@ -15,7 +15,7 @@ describe("Security review", async () => {
   const wallets = await viem.getWalletClients();
   const [deployer, ownerA, ownerB, guest1, guest2, guest3, recovery] = wallets;
 
-  it("invariants hold across 300 random operations", async () => {
+  for (const seed0 of [42, 7, 2026]) it(`invariants hold across 300 random operations (seed ${seed0})`, async () => {
     const token = await viem.deployContract("MockUSDC");
     const registry = await viem.deployContract("GiftRegistry", [token.address, recovery.account.address]);
     const owners = [ownerA, ownerB, guest1]; // tracks current owners as ownership changes
@@ -31,7 +31,7 @@ describe("Security review", async () => {
     const ids = [1n, 2n, 3n];
 
     // Deterministic PRNG so failures are reproducible.
-    let seed = 42;
+    let seed = seed0;
     const rand = (n: number) => {
       seed = (seed * 1103515245 + 12345) % 2 ** 31;
       return Math.floor((seed / 2 ** 31) * n); // use high bits; low bits of an LCG cycle badly
@@ -55,7 +55,11 @@ describe("Security review", async () => {
           const i = rand(3);
           const caller = rand(4) === 0 ? actor.account : owners[i].account;
           if (rand(2) === 0) await registry.write.withdraw([ids[i]], { account: caller });
-          else await registry.write.withdrawTo([ids[i], actors[rand(actors.length)].account.address], { account: caller });
+          else {
+            // Sometimes try the forbidden recipients (registry / token); they must always revert.
+            const targets = [...actors.map((a) => a.account.address), registry.address, token.address];
+            await registry.write.withdrawTo([ids[i], targets[rand(targets.length)]], { account: caller });
+          }
           stats.withdrawn++;
         } else if (op < 9) {
           await token.write.transfer([registry.address, BigInt(1 + rand(5_000_000))], { account: actor.account });

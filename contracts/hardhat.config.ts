@@ -6,14 +6,16 @@ export default defineConfig({
   solidity: {
     profiles: {
       default: {
-        version: "0.8.28",
+        version: "0.8.37",
         settings: { evmVersion: "cancun" },
       },
       production: {
-        version: "0.8.28",
+        version: "0.8.37",
         settings: {
           evmVersion: "cancun",
-          optimizer: { enabled: true, runs: 200 },
+          // Yul optimizer off: avoids solc bug YulOptimizerKnowledgeBaseStaleBookkeeping
+          // (unfixed as of 0.8.37), which could otherwise touch OpenZeppelin's assembly.
+          optimizer: { enabled: true, runs: 200, details: { yul: false } },
         },
       },
     },

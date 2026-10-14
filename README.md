@@ -41,7 +41,7 @@ lib/                       chain config, wagmi/viem setup, tx helper, formatting
 supabase/schema.sql        database tables
 ```
 
-Stack: Next.js 16, React 19, Tailwind CSS 4, wagmi 3 + viem 2 (injected wallets such as MetaMask and Rabby), Supabase, Hardhat 3, OpenZeppelin Contracts 5, Solidity 0.8.28.
+Stack: Next.js 16, React 19, Tailwind CSS 4, wagmi 3 + viem 2 (injected wallets such as MetaMask and Rabby), Supabase, Hardhat 3, OpenZeppelin Contracts 5, Solidity 0.8.37.
 
 ### Smart contract rules
 
@@ -177,9 +177,9 @@ This creates a registry, approves 0.07 USDC, contributes 0.05 to a gift and 0.02
 
 ### 5. Verify the source on the explorer
 The explorer is behind a Cloudflare challenge, so automated verification from the CLI may not work. Try manual verification in the explorer UI (contract page → "Verify & publish") with these settings:
-- Compiler `v0.8.28`
+- Compiler `v0.8.37`
 - EVM version `cancun`
-- Optimizer enabled, 200 runs
+- Optimizer enabled, 200 runs, with the Yul optimizer disabled (`details.yul: false`)
 - Constructor argument: the USDC address
 
 `npx hardhat compile --build-profile production` reproduces the exact build.
