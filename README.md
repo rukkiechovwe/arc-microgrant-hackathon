@@ -1,16 +1,27 @@
-# Gift Registry on Arc
+# Your Wish
 
-Create a gift registry for a wedding, birthday, graduation, baby shower, housewarming, anniversary or any other celebration. Share one link. Friends and family contribute **USDC on Arc Mainnet** toward individual gifts (many people can fund one big gift together) or send a general cash gift. Only the registry owner can withdraw, and the smart contract enforces that.
+**Your wishlist. Their way to make it happen.**
+
+Your Wish is a gift registry for life's biggest moments: weddings, birthdays, baby showers, housewarmings, anniversaries, graduations and more. Create a registry, share one link, and friends and family can buy a gift outright, chip in together toward something bigger, or send a cash gift of their choice. Every gift is paid in **USDC on Arc Mainnet** and held by a smart contract that only the registry owner can withdraw from.
 
 | | |
 |---|---|
-| Live app | _pending: add your Vercel URL after deploying_ |
+| Live app | https://your-wishlist-registry.vercel.app |
 | Network | Arc Mainnet, chain ID `5042` |
-| GiftRegistry contract | _pending: see `contracts/deployments/arcMainnet.json` after deploying_ |
+| GiftRegistry contract | [`0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2`](https://explorer.arc.io/address/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2) |
+| Deployment tx | [`0xa83234f8…0e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) (block 25997066) |
+| Source verification | [Sourcify: exact match](https://sourcify.dev/server/v2/contract/5042/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2) (creation and runtime bytecode) |
 | USDC (ERC-20 interface) | [`0x3600000000000000000000000000000000000000`](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000), 6 decimals |
 | Explorer | https://explorer.arc.io |
 
 Arc network values come from the official docs ([connect to Arc](https://docs.arc.io/arc/references/connect-to-arc), [contract addresses](https://docs.arc.io/arc/references/contract-addresses), [gas and fees](https://docs.arc.io/arc/references/gas-and-fees)). They were also checked against the live RPC: `eth_chainId` returns `0x13b2`, and `symbol()` and `decimals()` at the USDC address return `USDC` and `6`.
+
+## What you can do
+
+- **Create a registry in three steps:** pick the occasion and title, add gifts with USDC targets and optional photos, then review and create it with one transaction. A shareable link appears in a success modal.
+- **Share one link.** Guests see the wishlist as photo cards with live "% funded" progress, and contribute any amount to a gift or send a general cash gift.
+- **Manage everything from the dashboard:** totals received and ready to withdraw, all your registries with one-click withdraw, and recent gifts with guests' names and notes. Each registry has its own page to withdraw to your wallet or another address, transfer ownership, or close it (with confirmation). Sharing is disabled while a registry is closed.
+- **Works on phones:** full mobile navigation and layouts.
 
 ## How Arc is used
 
@@ -26,22 +37,27 @@ Arc network values come from the official docs ([connect to Arc](https://docs.ar
 contracts/                 Hardhat 3 project
   contracts/GiftRegistry.sol     the only production contract
   contracts/mocks/               test-only tokens (mock USDC, fee-on-transfer, false-returning, re-entrant)
-  test/GiftRegistry.ts           29 unit tests (node:test + viem)
-  test/SecurityReview.ts         randomized invariant test + documented limitations (6 tests)
-  scripts/deploy.ts              deploy to Arc Mainnet (dry-runs locally without --network)
+  test/GiftRegistry.ts           unit tests (node:test + viem)
+  test/SecurityReview.ts         randomized invariant test + documented limitations
+  scripts/deploy.ts              deploy to Arc (dry-runs locally without --network)
   scripts/smoke.ts               real create → approve → contribute → withdraw check
   scripts/local-setup.ts         mock USDC + registry on a local Hardhat node
-app/                       Next.js 16 App Router
-  page.tsx                       homepage
-  create/page.tsx                create a registry
-  r/[id]/page.tsx                public registry page (contribute, withdraw)
-  api/registries/...             metadata + contribution-note API (server-side only)
-components/                UI (CreateRegistryForm, RegistryView, ContributeDialog, WithdrawPanel, …)
+  deployments/arcMainnet.json    the live deployment (address, tx hash, block)
+app/                       Next.js 16 App Router, split into route groups by layout
+  (marketing)/page.tsx           landing page (dark header + footer)
+  (site)/create/                 3-step create flow
+  (site)/r/[id]/                 public registry page (guests contribute here)
+  (app)/dashboard/               owner dashboard, and dashboard/[slug] for one registry (no footer)
+  api/registries/...             metadata, owner lookup, contribution-note API (server-side only)
+components/                UI: CreateRegistryForm, RegistryView, GiftTile, Dashboard, OwnerPanel
+                           (BalanceCard, ManageCard), ContributeDialog, Header, SiteFooter, landing/*
 lib/                       chain config, wagmi/viem setup, tx helper, formatting, metadata schema
 supabase/schema.sql        database tables
 ```
 
-Stack: Next.js 16, React 19, Tailwind CSS 4, wagmi 3 + viem 2 (injected wallets such as MetaMask and Rabby), Supabase, Hardhat 3, OpenZeppelin Contracts 5, Solidity 0.8.37.
+Stack: Next.js 16 (Cache Components), React 19, Tailwind CSS 4, wagmi 3 + viem 2 (injected wallets such as MetaMask and Rabby), Supabase, Hardhat 3, OpenZeppelin Contracts 5, Solidity 0.8.37.
+
+The app runs on Arc Mainnet only (plus a local Hardhat chain for development). Any other `NEXT_PUBLIC_CHAIN_ID` stops it at startup, so it can never be pointed at the wrong chain by mistake.
 
 ### Smart contract rules
 
@@ -62,7 +78,7 @@ Stack: Next.js 16, React 19, Tailwind CSS 4, wagmi 3 + viem 2 (injected wallets 
   - Only the `recoveryAddress` set at deployment (the deployer) can call it, and that address can't be changed.
   - It can never touch registry funds; tests check this.
   - Native USDC value transfers to the contract are rejected outright, because it has no `receive` function.
-- **Constructor checks.** The token address must have contract code and report 6 decimals. This catches obvious mistakes, but it can't prove the address is Circle's USDC. The deploy script hardcodes the documented address and verifies `symbol()` and `decimals()` on chain, and `npm run check:testnet` / `check:arc` re-checks a deployment.
+- **Constructor checks.** The token address must have contract code and report 6 decimals. This catches obvious mistakes, but it can't prove the address is Circle's USDC. The deploy script hardcodes the documented address and verifies `symbol()` and `decimals()` on chain, and `npm run check:arc` re-checks the mainnet deployment.
 - Protections:
   - `ReentrancyGuard` on every function that moves funds.
   - Checks-effects-interactions ordering.
@@ -110,7 +126,7 @@ Requirements: Node 22+ and a browser wallet (MetaMask or Rabby).
 ```bash
 npm install                        # frontend
 cd contracts && npm install        # contracts
-npm test                           # 35 contract tests
+npm test                           # 38 contract tests
 npm run deploy:dry                 # dry-run the deploy script on a throwaway chain
 npm run smoke:dry                  # dry-run the full create/contribute/withdraw flow
 ```
@@ -133,20 +149,6 @@ npm run dev
 - pages render
 
 Import one of the Hardhat test private keys into a **separate test wallet profile**, and add network `http://127.0.0.1:8545` with chain ID 31337. Without Supabase keys, local dev stores data in `.data/dev-db.json`.
-
-## Testing contract changes on Arc Testnet (free USDC)
-
-The web app runs on Arc Mainnet only (or the local Hardhat chain for development). Arc Testnet (chain ID `5042002`, explorer https://explorer.testnet.arc.io) is still useful for trying contract changes with free test USDC before deploying them to Mainnet. USDC is at the same address, `0x3600…0000`.
-
-1. Get test USDC at https://faucet.circle.com (choose Arc Testnet) for the deployer wallet and for a second "guest" wallet.
-2. Store your key and deploy:
-   ```bash
-   cd contracts
-   npx hardhat keystore set ARC_PRIVATE_KEY
-   npm run deploy:testnet
-   npm run smoke:testnet
-   ```
-   The deploy step writes the address to `deployments/arcTestnet.json`, and the smoke test runs a real create, contribute and withdraw against it.
 
 ## Deploying to Arc Mainnet
 
@@ -171,14 +173,13 @@ npm run smoke:arc
 ```
 This creates a registry, approves 0.07 USDC, contributes 0.05 to a gift and 0.02 as a general gift, then withdraws. It prints an explorer link for each transaction.
 
-### 5. Verify the source on the explorer
-The explorer is behind a Cloudflare challenge, so automated verification from the CLI may not work. Try manual verification in the explorer UI (contract page → "Verify & publish") with these settings:
-- Compiler `v0.8.37`
-- EVM version `cancun`
-- Optimizer enabled, 200 runs, with the Yul optimizer disabled (`details.yul: false`)
-- Constructor argument: the USDC address
+### 5. Verify the source on Sourcify
+The Arc explorer's verification form only offers compilers up to v0.8.36, and the contract is built with 0.8.37, so verify on [Sourcify](https://verify.sourcify.dev) instead (it supports Arc Mainnet, chain 5042):
+1. `cd contracts && npx hardhat build --build-profile production` reproduces the exact build (EVM `cancun`, optimizer on, 200 runs, Yul optimizer off).
+2. Take the `input` object from the matching file in `artifacts/build-info/` as the **Standard JSON input**.
+3. Submit with compiler `0.8.37+commit.f401782d`, contract `project/contracts/GiftRegistry.sol:GiftRegistry`, and the deployment tx hash.
 
-`npx hardhat compile --build-profile production` reproduces the exact build.
+The live contract is verified this way with an **exact match**.
 
 ## Supabase setup
 
@@ -196,13 +197,13 @@ RLS is enabled with no policies, so the tables can only be reached through the a
 
 | Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_CHAIN_ID` | `5042` |
-| `NEXT_PUBLIC_REGISTRY_ADDRESS` | deployed contract address |
+| `NEXT_PUBLIC_CHAIN_ID` | `5042` (required; other values fail the build) |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS` | `0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2` |
 | `SUPABASE_URL` | from Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | from Supabase |
 | `RPC_URL` | optional; defaults to `https://rpc.mainnet.arc.io` |
 
-3. Deploy, then test the live URL (see the checklist below).
+3. Deploy, then test the live URL (see the checklist below). `NEXT_PUBLIC_` values are baked in at build time, so redeploy after changing them.
 
 ## Known limitations (MVP)
 
@@ -216,14 +217,19 @@ RLS is enabled with no policies, so the tables can only be reached through the a
 
 ## Arc Microgrants submission checklist
 
-- [ ] `npm test` passes in `contracts/`
-- [ ] Contract deployed to Arc Mainnet; address and tx hash added to the table above
-- [ ] `npm run smoke:arc` passed; explorer links recorded below
-- [ ] Contract source verified on explorer.arc.io (or verification attempt documented)
-- [ ] Supabase schema applied; Vercel env vars set
-- [ ] Live URL: create a registry → contribute from a second wallet → the contribution shows on the page → owner withdraws
-- [ ] Wallet-rejection, insufficient-USDC and wrong-network states checked on the live URL
-- [ ] Public GitHub repo with this README
+- [x] `npm test` passes in `contracts/` (38 tests)
+- [x] Contract deployed to Arc Mainnet; address and tx hash in the table above
+- [x] Contract source verified (Sourcify exact match; the Arc explorer form doesn't offer 0.8.37 yet)
+- [x] Supabase schema applied; Vercel env vars set
+- [x] Live URL on Arc Mainnet: registry created and a real USDC contribution made from the app
+- [ ] Owner withdrawal from the live app
+- [x] Public GitHub repo with this README
 
-### Onchain evidence
-_Add the deployment and smoke-test transaction links here after running steps 3–4._
+### Onchain evidence (Arc Mainnet)
+
+| Step | Transaction |
+|---|---|
+| Deploy `GiftRegistry` | [`0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) |
+| Create registry #1 from the live app | [`0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1`](https://explorer.arc.io/tx/0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1) |
+| Contribute 0.5 USDC to a gift from the live app | [`0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9`](https://explorer.arc.io/tx/0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9) |
+| Withdraw | _pending_ |
