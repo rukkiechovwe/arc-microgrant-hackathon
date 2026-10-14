@@ -30,7 +30,7 @@ export function ConnectButton({ className = "", tone = "light", outline = false,
   const action = `${dark
     ? outline ? "btn border border-white/30 text-paper hover:bg-white/10" : "btn bg-paper text-ink hover:bg-white"
     : outline ? "btn-secondary" : "btn-primary"} ${buttonClassName}`;
-  const errorText = `mt-1 max-w-64 text-right text-xs ${dark ? "text-accent-soft" : "text-accent-dark"}`;
+  const errorText = `mt-1 max-w-64 text-right text-xs ${dark ? "text-accent-soft" : "text-danger"}`;
 
   if (!mounted) return <div className={`h-10 w-36 ${className}`} />;
 

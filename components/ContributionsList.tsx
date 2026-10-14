@@ -10,7 +10,7 @@ export function ContributionsList({
 }) {
   return (
     <section className="mt-14">
-      <h2 className="font-display text-2xl font-semibold">{title}</h2>
+      <h2 className="heading-section">{title}</h2>
       <p className="mt-1 text-sm text-muted">Each entry is checked against its confirmed Arc transaction. Names and notes are written by the giver.</p>
       {isLoading ? (
         <p className="mt-6 text-sm text-muted">Loading…</p>
@@ -19,7 +19,7 @@ export function ContributionsList({
           {emptyText}
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-line rounded-3xl border border-line bg-card">
+        <ul className="card mt-6 divide-y divide-line">
           {notes.map((n) => {
             const url = explorerTx(n.txHash);
             const giftName = n.giftId === "general" ? "Cash gift" : gifts[Number(n.giftId)]?.name ?? `Gift ${n.giftId}`;

@@ -15,6 +15,10 @@
   --color-sage: #8a6d45; /* deep gold: success / funded */
   --color-sage-soft: #f1e7d6;
   --color-gold: #d2b48c;
+  --color-gold-dark: #c09e72;
+  /* Destructive actions and errors only. */
+  --color-danger: #b42318;
+  --color-danger-soft: #fbeae8;
   --color-night: #30231f;
   --color-night-soft: #43332d;
   --color-stone: #e7ddd0;
@@ -51,23 +55,45 @@ body {
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
+/* Same pill buttons as the landing page: gold primary, quiet white secondary. */
 @utility btn-primary {
-  @apply btn bg-accent text-white hover:bg-accent-dark;
+  @apply btn bg-gold text-ink hover:bg-gold-dark;
 }
 @utility btn-secondary {
-  @apply btn border border-line bg-card text-ink hover:bg-paper;
+  @apply btn border border-line bg-white text-ink hover:bg-paper;
+}
+@utility btn-danger {
+  @apply btn text-danger hover:bg-danger-soft;
 }
 @utility btn-ghost {
   @apply btn text-muted hover:text-ink;
 }
 @utility input {
-  @apply w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted/60 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15;
+  @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted/60 outline-none focus:border-gold-dark focus:ring-2 focus:ring-gold/30;
 }
 @utility label {
   @apply mb-1.5 block text-sm font-medium text-ink;
 }
 @utility card {
-  @apply rounded-3xl border border-line bg-card;
+  @apply rounded-[1.75rem] bg-white shadow-[0_20px_40px_-24px_rgba(48,35,31,0.35)] ring-1 ring-line/60;
+}
+
+/* Landing-page type scale, used across the app. */
+/* Registry titles: the biggest type in the app, matching the landing page. */
+@utility heading-hero {
+  @apply font-condensed text-[clamp(3rem,9vw,7.5rem)] leading-[0.88] tracking-wide break-words uppercase;
+}
+@utility heading-page {
+  @apply font-condensed text-[clamp(2.5rem,7vw,5rem)] leading-[0.92] tracking-wide uppercase;
+}
+@utility heading-section {
+  @apply font-condensed text-[clamp(1.9rem,4vw,2.75rem)] leading-none tracking-wide uppercase;
+}
+@utility heading-card {
+  @apply text-lg font-bold tracking-tight;
+}
+@utility eyebrow {
+  @apply text-xs font-semibold tracking-[0.14em] text-muted uppercase;
 }
 
 /* Hollow display type, e.g. "A WISH FOR" over the occasions. */

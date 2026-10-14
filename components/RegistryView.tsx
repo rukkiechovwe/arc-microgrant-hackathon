@@ -8,7 +8,7 @@ import { isAddressEqual } from "viem";
 import { useConnection } from "wagmi";
 import { explorerAddress, GENERAL_FUND, REGISTRY_ADDRESS } from "@/lib/config";
 import { formatUsdc, shortAddress } from "@/lib/format";
-import { OCCASIONS, SLUG_PATTERN, type RegistryMetadata } from "@/lib/metadata";
+import { OCCASIONS, SLUG_PATTERN } from "@/lib/metadata";
 import {
   clearPendingMetadata,
   loadPendingMetadata,
@@ -26,7 +26,7 @@ import { useMounted } from "./ConnectButton";
 import { ContributeDialog, type ContributeTarget } from "./ContributeDialog";
 import { ContributionsList } from "./ContributionsList";
 import { PendingOwnerBanner } from "./OwnerPanel";
-import { ProgressBar } from "./ProgressBar";
+import { GiftTile } from "./GiftTile";
 
 export function RegistryView() {
   const params = useParams<{ id: string }>();
@@ -77,25 +77,20 @@ export function RegistryView() {
 
   const funded = targets.filter((t, i) => raised[i] >= t).length;
 
+  const giveCash = () => setTarget({ giftId: GENERAL_FUND, name: "General cash gift", remaining: null });
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-      <header className="max-w-3xl">
-        <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold tracking-wide text-accent-dark uppercase">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+      <header>
+        <span className="rounded-full bg-gold/30 px-3 py-1 text-xs font-semibold tracking-wide text-ink uppercase">
           {OCCASIONS[metadata.occasion]}
         </span>
-        <h1 className="mt-4 font-display text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">{metadata.title}</h1>
-        <p className="mt-2 text-muted">from <strong className="text-ink">{metadata.displayName}</strong></p>
-        {metadata.description && <p className="mt-5 leading-relaxed whitespace-pre-line">{metadata.description}</p>}
+        <h1 className="heading-hero mt-4">{metadata.title}</h1>
+        <p className="mt-3 text-muted">from <strong className="text-ink">{metadata.displayName}</strong></p>
       </header>
 
-      <div className="mt-8 flex flex-wrap gap-3 text-sm">
-        <Stat label="Given so far" value={`${formatUsdc(registry.totalRaised, { decimals: 2 })} USDC`} />
-        {targets.length > 0 && <Stat label="Gifts fully funded" value={`${funded} of ${targets.length}`} />}
-        <ShareButton slug={metadata.slug} />
-      </div>
-
       {closed && (
-        <p className="mt-6 rounded-2xl bg-paper p-4 text-sm text-muted ring-1 ring-line">
+        <p className="mt-8 rounded-2xl bg-white p-4 text-sm text-muted ring-1 ring-line">
           This registry is closed. {metadata.displayName} is no longer accepting gifts here. Thank you for your kindness!
         </p>
       )}
@@ -106,36 +101,81 @@ export function RegistryView() {
           queryClient.invalidateQueries({ queryKey: myRegistriesKey(address) });
         }} />
       )}
-      {isOwner && (
-        <div className="mt-8 flex flex-col gap-3 rounded-3xl border border-sage/30 bg-sage-soft/50 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm">
-            <strong>This is your registry.</strong> <span className="text-muted">Guests see this page without this note.</span>
-          </p>
-          <Link href={`/dashboard?r=${metadata.slug}`} className="btn-primary bg-sage hover:bg-sage/90">
-            Manage &amp; withdraw
-          </Link>
+
+      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
+          <h2 className="heading-section">The wishlist</h2>
+          {targets.length === 0 ? (
+            <p className="card mt-6 p-8 text-center text-sm text-muted">
+              {metadata.displayName} hasn&apos;t listed specific gifts. Send a cash gift of any amount instead.
+            </p>
+          ) : (
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {targets.map((t, i) => {
+                const complete = raised[i] >= t;
+                return (
+                  <GiftTile key={i} gift={metadata.gifts[i]} target={t} raised={raised[i]}
+                    action={
+                      <button className="btn-primary w-full" disabled={complete || closed}
+                        onClick={() => setTarget({ giftId: BigInt(i), name: metadata.gifts[i].name, remaining: t - raised[i] })}>
+                        {complete ? "Fully funded, thank you!" : closed ? "Registry closed" : "Contribute"}
+                      </button>
+                    } />
+                );
+              })}
+            </div>
+          )}
+
+          <ContributionsList notes={notes.data} isLoading={notes.isPending} gifts={metadata.gifts} />
+          <DataSources owner={registry.owner} />
         </div>
-      )}
 
-      <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {targets.map((t, i) => (
-          <GiftCard key={i} gift={metadata.gifts[i]} target={t} raised={raised[i]} closed={closed}
-            onContribute={() => setTarget({ giftId: BigInt(i), name: metadata.gifts[i].name, remaining: t - raised[i] })} />
-        ))}
-        <div className="card flex flex-col bg-gradient-to-br from-accent-soft/60 to-card p-6">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-card font-display text-2xl text-accent">$</div>
-          <h3 className="mt-4 font-display text-xl font-semibold">General cash gift</h3>
-          <p className="mt-1 flex-1 text-sm text-muted">Send any amount for {metadata.displayName} to use however they like.</p>
-          <p className="mt-4 text-sm"><strong>{formatUsdc(registry.generalRaised, { decimals: 2 })} USDC</strong> <span className="text-muted">given</span></p>
-          <button className="btn-primary mt-4" disabled={closed} onClick={() => setTarget({ giftId: GENERAL_FUND, name: "General cash gift", remaining: null })}>
-            {closed ? "Registry closed" : "Send a cash gift"}
-          </button>
-        </div>
-      </section>
+        {/* Comes right after the title on mobile; right-hand column from lg up. */}
+        <aside className="order-first space-y-4 lg:sticky lg:top-6 lg:order-last lg:self-start">
+          {isOwner && (
+            <div className="rounded-[1.75rem] bg-gold p-5">
+              <p className="text-sm"><strong>This is your registry.</strong> Guests see this page without this note.</p>
+              <Link href={`/dashboard/${metadata.slug}`} className="btn mt-3 w-full bg-night text-paper hover:bg-night-soft">
+                Manage &amp; withdraw
+              </Link>
+            </div>
+          )}
 
-      <ContributionsList notes={notes.data} isLoading={notes.isPending} gifts={metadata.gifts} />
+          <section className="card p-6 text-center">
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-night font-condensed text-3xl text-gold ring-4 ring-gold/40">
+              {metadata.displayName.trim().charAt(0).toUpperCase()}
+            </div>
+            <p className="mt-4 text-lg font-bold tracking-tight">{metadata.displayName}</p>
+            <p className="text-sm text-muted">{OCCASIONS[metadata.occasion]}</p>
+            {metadata.description && <p className="mt-4 text-left text-sm leading-relaxed whitespace-pre-line text-ink/80">{metadata.description}</p>}
+            <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-line pt-5 text-left">
+              <div>
+                <dt className="text-xs text-muted">Given so far</dt>
+                <dd className="font-condensed text-2xl tracking-wide">{formatUsdc(registry.totalRaised, { decimals: 2 })}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Gifts funded</dt>
+                <dd className="font-condensed text-2xl tracking-wide">{targets.length ? `${funded}/${targets.length}` : "—"}</dd>
+              </div>
+            </dl>
+            {!closed && <ShareButton slug={metadata.slug} />}
+          </section>
 
-      <DataSources owner={registry.owner} />
+          <section className="relative overflow-hidden rounded-[1.75rem] bg-night p-6 text-paper">
+            <svg className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 text-gold/25" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+              {[40, 60, 80, 100].map((r) => <circle key={r} cx="200" cy="0" r={r * 1.6} stroke="currentColor" strokeWidth="1" />)}
+            </svg>
+            <p className="relative text-xs font-semibold tracking-[0.14em] text-gold uppercase">General cash gift</p>
+            <p className="relative mt-3 text-xl font-bold tracking-tight">Send any amount for {metadata.displayName} to use however they like.</p>
+            <p className="relative mt-4 text-sm text-paper/70">
+              <strong className="font-condensed text-2xl tracking-wide text-paper">{formatUsdc(registry.generalRaised, { decimals: 2 })}</strong> USDC given
+            </p>
+            <button className="btn-primary relative mt-5 w-full py-3" disabled={closed} onClick={giveCash}>
+              {closed ? "Registry closed" : "Send a cash gift"}
+            </button>
+          </section>
+        </aside>
+      </div>
 
       {target && (
         <ContributeDialog registryId={id} target={target} metadata={metadata}
@@ -146,52 +186,11 @@ export function RegistryView() {
   );
 }
 
-function GiftCard({ gift, target, raised, closed, onContribute }: {
-  gift: RegistryMetadata["gifts"][number]; target: bigint; raised: bigint; closed: boolean; onContribute: () => void;
-}) {
-  const complete = raised >= target;
-  return (
-    <div className="card flex flex-col overflow-hidden">
-      {gift.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={gift.imageUrl} alt="" className="h-44 w-full bg-paper object-cover" loading="lazy" referrerPolicy="no-referrer" />
-      ) : (
-        <div className="grid h-44 place-items-center bg-gradient-to-br from-paper to-accent-soft/50 font-display text-5xl text-accent/70">
-          {gift.name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <div className="flex flex-1 flex-col p-6">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-xl font-semibold">{gift.name}</h3>
-          {complete && <span className="shrink-0 rounded-full bg-sage-soft px-2.5 py-0.5 text-xs font-semibold text-sage">Funded</span>}
-        </div>
-        {gift.description && <p className="mt-1 text-sm text-muted">{gift.description}</p>}
-        <div className="mt-auto pt-5">
-          <ProgressBar raised={raised} target={target} />
-          <p className="mt-2 text-sm">
-            <strong>{formatUsdc(raised, { decimals: 2 })}</strong> <span className="text-muted">of {formatUsdc(target, { decimals: 2 })} USDC</span>
-          </p>
-          <button className="btn-primary mt-4 w-full" disabled={complete || closed} onClick={onContribute}>
-            {complete ? "Fully funded, thank you!" : closed ? "Registry closed" : "Contribute"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-line bg-card px-4 py-2.5">
-      <span className="text-muted">{label}</span> <strong className="ml-1">{value}</strong>
-    </div>
-  );
-}
 
 function ShareButton({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <button className="btn-secondary rounded-2xl" onClick={async () => {
+    <button className="btn-secondary mt-5 w-full" onClick={async () => {
       const url = `${window.location.origin}/r/${slug}`;
       if (navigator.share) await navigator.share({ url }).catch(() => {});
       else { await navigator.clipboard.writeText(url).catch(() => {}); setCopied(true); }
@@ -205,7 +204,7 @@ function DataSources({ owner }: { owner: `0x${string}` }) {
   const contractUrl = REGISTRY_ADDRESS ? explorerAddress(REGISTRY_ADDRESS) : null;
   const ownerUrl = explorerAddress(owner);
   return (
-    <section className="mt-12 rounded-3xl bg-card/60 p-6 text-sm text-muted ring-1 ring-line">
+    <section className="card mt-12 p-6 text-sm text-muted sm:p-8">
       <h2 className="font-semibold text-ink">Where this information comes from</h2>
       <ul className="mt-3 list-disc space-y-1.5 pl-5">
         <li><strong className="text-ink">Amounts, targets and progress</strong> are read live from the Arc blockchain. They only change when a transaction is confirmed.</li>
@@ -244,7 +243,7 @@ function MissingDetails({ id, isOwner, hash, tampered, onPublished }: {
           }}>
             {busy ? "Publishing…" : "Publish my registry details"}
           </button>
-          {error && <p className="mt-2 text-sm text-accent-dark">{error}</p>}
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </div>
       )}
     </Message>
@@ -253,8 +252,8 @@ function MissingDetails({ id, isOwner, hash, tampered, onPublished }: {
 
 function Loading() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-24 text-center text-muted sm:px-6">
-      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+    <div className="mx-auto max-w-7xl px-4 py-28 text-center text-muted sm:px-6">
+      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-gold-dark" />
       <p className="mt-4 text-sm">Loading registry from Arc…</p>
     </div>
   );
@@ -263,7 +262,7 @@ function Loading() {
 function Message({ title, body, children }: { title: string; body: string; children?: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-lg px-4 py-24 text-center">
-      <h1 className="font-display text-3xl font-semibold">{title}</h1>
+      <h1 className="heading-section">{title}</h1>
       <p className="mt-3 text-muted">{body}</p>
       {children}
       <Link href="/" className="btn-ghost mt-6">← Back home</Link>

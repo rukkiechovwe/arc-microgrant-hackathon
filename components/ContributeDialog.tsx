@@ -121,23 +121,23 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={() => !busy && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="contribute-title"
-        className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-6 shadow-xl sm:rounded-3xl"
+        className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[1.75rem] bg-paper p-6 shadow-2xl sm:rounded-[1.75rem] sm:p-8"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold tracking-wide text-muted uppercase">Contribute to</p>
-            <h2 id="contribute-title" className="font-display text-2xl font-semibold">{target.name}</h2>
+            <h2 id="contribute-title" className="heading-section">{target.name}</h2>
           </div>
           <button className="text-2xl leading-none text-muted hover:text-ink disabled:opacity-30" disabled={busy} onClick={onClose} aria-label="Close">×</button>
         </div>
 
         {status.kind === "success" ? (
           <div className="mt-6 space-y-4 text-center">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-sage-soft text-xl text-sage">✓</div>
-            <p className="font-display text-xl font-semibold">Thank you! Your gift of {formatUsdc(status.amount, { decimals: 2 })} USDC is confirmed.</p>
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-gold text-xl text-ink">✓</div>
+            <p className="heading-card text-xl">Thank you! Your gift of {formatUsdc(status.amount, { decimals: 2 })} USDC is confirmed.</p>
             <p className="text-sm text-muted">It&apos;s been recorded on Arc and {metadata.displayName} can now withdraw it.</p>
-            {noteWarning && <p className="text-xs text-accent-dark">{noteWarning}</p>}
-            {explorerTx(status.hash) && <a className="block text-sm text-accent underline" href={explorerTx(status.hash)!} target="_blank" rel="noreferrer">View transaction</a>}
+            {noteWarning && <p className="text-xs text-danger">{noteWarning}</p>}
+            {explorerTx(status.hash) && <a className="block text-sm text-ink underline" href={explorerTx(status.hash)!} target="_blank" rel="noreferrer">View transaction</a>}
             <button className="btn-primary w-full" onClick={onClose}>Done</button>
           </div>
         ) : (
@@ -150,7 +150,7 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
                 <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-muted">USDC</span>
               </div>
               <div className="mt-1.5 flex justify-between gap-2 text-xs text-muted">
-                <span>{amountError ? <span className="text-accent-dark">{amountError}</span> : "1 USDC ≈ US$1"}</span>
+                <span>{amountError ? <span className="text-danger">{amountError}</span> : "1 USDC ≈ US$1"}</span>
                 {target.remaining !== null && (
                   <button type="button" className="underline" disabled={busy} onClick={() => setInput(formatUsdc(target.remaining!, { decimals: 2 }).replace(/,/g, ""))}>
                     Remaining: {formatUsdc(target.remaining, { decimals: 2 })}
@@ -178,9 +178,9 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
               reversed by the app.
             </p>
 
-            {insufficient && <p className="text-sm text-accent-dark">You don&apos;t have enough USDC in this wallet.</p>}
-            {tightOnFees && <p className="text-xs text-accent-dark">Keep a few cents of USDC extra for the network fee.</p>}
-            {error && <p className="rounded-xl bg-accent-soft p-3 text-sm text-accent-dark">{error}</p>}
+            {insufficient && <p className="text-sm text-danger">You don&apos;t have enough USDC in this wallet.</p>}
+            {tightOnFees && <p className="text-xs text-danger">Keep a few cents of USDC extra for the network fee.</p>}
+            {error && <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
 
             {!isConnected || wrongChain ? (
               <div className="flex justify-center"><ConnectButton /></div>
@@ -194,7 +194,7 @@ export function ContributeDialog({ registryId, target, metadata, onClose, onConf
               </button>
             )}
             {pendingHash && explorerTx(pendingHash) && (
-              <a className="block text-center text-xs text-accent underline" href={explorerTx(pendingHash)!} target="_blank" rel="noreferrer">
+              <a className="block text-center text-xs text-ink underline" href={explorerTx(pendingHash)!} target="_blank" rel="noreferrer">
                 Track transaction on the Arc explorer
               </a>
             )}

@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Anton, DM_Sans, Fraunces } from "next/font/google";
-import { Header } from "@/components/Header";
-import { SiteFooter } from "@/components/SiteFooter";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -18,11 +16,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${body.variable} ${display.variable} ${condensed.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
-        <Providers>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </Providers>
+        {/* Header, <main> and footer come from each route group's layout: (marketing), (site), (app). */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

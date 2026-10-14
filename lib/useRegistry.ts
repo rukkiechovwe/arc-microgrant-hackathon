@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import type { Address, ContractFunctionReturnType } from "viem";
-import { useConnection, useReadContract } from "wagmi";
+import { useConnection, useReadContract, useReadContracts } from "wagmi";
 import { chain, REGISTRY_ADDRESS } from "./config";
 import { giftRegistryAbi } from "./giftRegistryAbi";
 import { hashMetadata, parseMetadataJson, type RegistryMetadata } from "./metadata";
@@ -28,6 +28,20 @@ export function useOnchainRegistry(id: bigint | null) {
     args: [id ?? 0n],
     chainId: chain.id,
     query: { enabled: !!REGISTRY_ADDRESS && id !== null, refetchInterval: 15_000, retry: 1 },
+  });
+}
+
+/** Live onchain state for several registries in one multicall, in the same order as `ids`. */
+export function useOnchainRegistries(ids: bigint[]) {
+  return useReadContracts({
+    contracts: ids.map((id) => ({
+      address: REGISTRY_ADDRESS,
+      abi: giftRegistryAbi,
+      functionName: "getRegistry" as const,
+      args: [id] as const,
+      chainId: chain.id,
+    })),
+    query: { enabled: !!REGISTRY_ADDRESS && ids.length > 0, refetchInterval: 15_000 },
   });
 }
 
@@ -85,16 +99,29 @@ export async function syncRegistryOwner(registryId: bigint) {
   await fetch(`/api/registries/${registryId}/owner`, { method: "POST" }).catch(() => {});
 }
 
+async function fetchNotes(id: bigint): Promise<ContributionNote[]> {
+  const res = await fetch(`/api/registries/${id}/contributions`);
+  if (!res.ok) throw new Error("Could not load contributions");
+  return (await res.json()).contributions;
+}
+
 export function useContributionNotes(id: bigint | null) {
   return useQuery({
     enabled: id !== null,
     queryKey: ["registry-contributions", String(id)],
-    queryFn: async (): Promise<ContributionNote[]> => {
-      const res = await fetch(`/api/registries/${id}/contributions`);
-      if (!res.ok) throw new Error("Could not load contributions");
-      return (await res.json()).contributions;
-    },
+    queryFn: () => fetchNotes(id!),
     refetchInterval: 30_000,
+  });
+}
+
+/** Contribution notes for several registries, sharing the per-registry cache above. */
+export function useContributionNotesMany(ids: bigint[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["registry-contributions", String(id)],
+      queryFn: () => fetchNotes(id),
+      refetchInterval: 30_000,
+    })),
   });
 }
 
