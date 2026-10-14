@@ -214,12 +214,3 @@ RLS is enabled with no policies, so the tables can only be reached through the a
 | `RPC_URL`                      | optional; defaults to `https://rpc.mainnet.arc.io` |
 
 3. Deploy, then test the live URL (see the checklist below). `NEXT_PUBLIC_` values are baked in at build time, so redeploy after changing them.
-
-### Onchain evidence (Arc Mainnet)
-
-| Step                                            | Transaction                                                                                                                                                           |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deploy `GiftRegistry`                           | [`0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) |
-| Create registry #1 from the live app            | [`0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1`](https://explorer.arc.io/tx/0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1) |
-| Contribute 0.5 USDC to a gift from the live app | [`0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9`](https://explorer.arc.io/tx/0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9) |
-| Withdraw                                        | _pending_                                                                                                                                                             |
