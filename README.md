@@ -4,15 +4,15 @@
 
 Your Wish is a gift registry for life's biggest moments: weddings, birthdays, baby showers, housewarmings, anniversaries, graduations and more. Create a registry, share one link, and friends and family can buy a gift outright, chip in together toward something bigger, or send a cash gift of their choice. Every gift is paid in **USDC on Arc Mainnet** and held by a smart contract that only the registry owner can withdraw from.
 
-| | |
-|---|---|
-| Live app | https://your-wishlist-registry.vercel.app |
-| Network | Arc Mainnet, chain ID `5042` |
-| GiftRegistry contract | [`0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2`](https://explorer.arc.io/address/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2) |
-| Deployment tx | [`0xa83234f8…0e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) (block 25997066) |
-| Source verification | [Sourcify: exact match](https://sourcify.dev/server/v2/contract/5042/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2) (creation and runtime bytecode) |
-| USDC (ERC-20 interface) | [`0x3600000000000000000000000000000000000000`](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000), 6 decimals |
-| Explorer | https://explorer.arc.io |
+|                         |                                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Live app                | https://your-wishlist-registry.vercel.app                                                                                                        |
+| Network                 | Arc Mainnet, chain ID `5042`                                                                                                                     |
+| GiftRegistry contract   | [`0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2`](https://explorer.arc.io/address/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2)                       |
+| Deployment tx           | [`0xa83234f8…0e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) (block 25997066)              |
+| Source verification     | [Sourcify: exact match](https://sourcify.dev/server/v2/contract/5042/0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2) (creation and runtime bytecode) |
+| USDC (ERC-20 interface) | [`0x3600000000000000000000000000000000000000`](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000), 6 decimals           |
+| Explorer                | https://explorer.arc.io                                                                                                                          |
 
 Arc network values come from the official docs ([connect to Arc](https://docs.arc.io/arc/references/connect-to-arc), [contract addresses](https://docs.arc.io/arc/references/contract-addresses), [gas and fees](https://docs.arc.io/arc/references/gas-and-fees)). They were also checked against the live RPC: `eth_chainId` returns `0x13b2`, and `symbol()` and `decimals()` at the USDC address return `USDC` and `6`.
 
@@ -70,7 +70,7 @@ The app runs on Arc Mainnet only (plus a local Hardhat chain for development). A
 - `withdraw(registryId)`: **only the owner, at any time**, receives everything contributed and not yet withdrawn. `withdrawTo(registryId, to)` sends it to another address the owner chooses, e.g. if the owner's address has been blocklisted by USDC and can't receive.
   - `totalWithdrawn` is updated before the transfer, so the same funds can't be withdrawn twice.
   - Per-gift progress is unchanged, so guests still see what each gift raised.
-  - *Why no "target reached" rule?* Locking funds until a target is met would trap money in gifts that never fill, and fixing that would need refund logic. Gifts are gifts to the owner either way, so "withdraw any time" is the simplest rule that never traps funds.
+  - _Why no "target reached" rule?_ Locking funds until a target is met would trap money in gifts that never fill, and fixing that would need refund logic. Gifts are gifts to the owner either way, so "withdraw any time" is the simplest rule that never traps funds.
 - **Ownership transfer** is two-step: the owner calls `transferRegistryOwnership(id, newWallet)`, then the new wallet calls `acceptRegistryOwnership(id)`. Proposing `address(0)` cancels. The old owner keeps control until the new one accepts.
 - **Closing:** `setRegistryClosed(id, true/false)` (owner only) stops or resumes new contributions. Withdrawals always work.
 - **Mistaken direct transfers.** USDC sent straight to the contract (a wallet "Send" of the ERC-20 token instead of `contribute`) belongs to no registry. The contract tracks `totalOwed`, everything contributed and not yet withdrawn across all registries.
@@ -92,11 +92,11 @@ Security review: `contracts/test/SecurityReview.ts` runs a randomized test of 30
 
 ### How onchain and offchain data are linked
 
-| Data | Where | Trust |
-|---|---|---|
-| Owner, gift targets, amounts raised, amounts withdrawn | Contract | Source of truth, read live by the browser |
-| Title, names, descriptions, image links | Supabase `registries.metadata_json` | Verified by hash |
-| Contributor name and note | Supabase `contributions` | Amount, gift and sender come from the verified tx receipt; name and note are self-reported |
+| Data                                                   | Where                               | Trust                                                                                      |
+| ------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| Owner, gift targets, amounts raised, amounts withdrawn | Contract                            | Source of truth, read live by the browser                                                  |
+| Title, names, descriptions, image links                | Supabase `registries.metadata_json` | Verified by hash                                                                           |
+| Contributor name and note                              | Supabase `contributions`            | Amount, gift and sender come from the verified tx receipt; name and note are self-reported |
 
 1. The browser serializes the registry details to JSON, computes `keccak256(json)`, and sends `createRegistry(hash, targets)`. The details include the **owner wallet** and the **link slug**, so both are covered by the onchain hash.
 2. After the transaction confirms, it posts `{registryId, json}` to `/api/registries`. The server reads the registry from Arc and stores the details **only if**:
@@ -105,6 +105,7 @@ Security review: `contracts/test/SecurityReview.ts` runs a randomized test of 30
    - the owner named inside matches the onchain owner
 
    Nobody can attach different details to someone else's registry, and a copycat registry that reuses the same hash is rejected.
+
 3. The registry page re-hashes the details and hides them if they don't match the chain.
 4. If step 2 fails (for example, a network error), the details are kept in the owner's browser. The registry page then offers the owner a **"Publish my registry details"** button.
 5. After a contribution confirms, the browser posts the tx hash (plus optional name and note) to `/api/registries/[id]/contributions`. The server fetches the receipt itself and stores only `Contributed` events from our contract. Contributions made outside the app still count in every total, because totals come from the contract; they just won't have a note.
@@ -142,6 +143,7 @@ npm run dev
 ```
 
 `npm run e2e:local` then runs 20 automated checks against the running app and chain:
+
 - real local transactions for create, contribute and withdraw
 - tampered metadata rejected (409)
 - fake or non-contribution tx hashes rejected (404 / 422)
@@ -153,28 +155,36 @@ Import one of the Hardhat test private keys into a **separate test wallet profil
 ## Deploying to Arc Mainnet
 
 ### 1. Fund a deployer wallet
+
 Use a **fresh wallet** used only for deploying. Send it about **1 USDC on Arc Mainnet**. Deployment costs well under that (gas is paid in USDC), and the smoke test uses 0.07 USDC, which it withdraws back to the wallet.
 
 ### 2. Store the key in Hardhat's encrypted keystore (never in a file or chat)
+
 ```bash
 cd contracts
 npx hardhat keystore set ARC_PRIVATE_KEY      # prompts for a password and the key
 ```
 
 ### 3. Deploy
+
 ```bash
 npm run deploy:arc
 ```
+
 The script checks that it's on chain 5042, that the token at `0x3600…0000` is 6-decimal USDC, and that the wallet holds USDC. It then deploys, waits for the receipt, and writes `deployments/arcMainnet.json` with the address and transaction hash.
 
 ### 4. Real onchain smoke test
+
 ```bash
 npm run smoke:arc
 ```
+
 This creates a registry, approves 0.07 USDC, contributes 0.05 to a gift and 0.02 as a general gift, then withdraws. It prints an explorer link for each transaction.
 
 ### 5. Verify the source on Sourcify
+
 The Arc explorer's verification form only offers compilers up to v0.8.36, and the contract is built with 0.8.37, so verify on [Sourcify](https://verify.sourcify.dev) instead (it supports Arc Mainnet, chain 5042):
+
 1. `cd contracts && npx hardhat build --build-profile production` reproduces the exact build (EVM `cancun`, optimizer on, 200 runs, Yul optimizer off).
 2. Take the `input` object from the matching file in `artifacts/build-info/` as the **Standard JSON input**.
 3. Submit with compiler `0.8.37+commit.f401782d`, contract `project/contracts/GiftRegistry.sol:GiftRegistry`, and the deployment tx hash.
@@ -195,41 +205,21 @@ RLS is enabled with no policies, so the tables can only be reached through the a
 1. Push this repo to GitHub, then on vercel.com choose **Add New → Project** and import it. The framework is Next.js and the root directory is the repo root.
 2. Set these environment variables (see `.env.example`):
 
-| Variable | Value |
-|---|---|
-| `NEXT_PUBLIC_CHAIN_ID` | `5042` (required; other values fail the build) |
-| `NEXT_PUBLIC_REGISTRY_ADDRESS` | `0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2` |
-| `SUPABASE_URL` | from Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | from Supabase |
-| `RPC_URL` | optional; defaults to `https://rpc.mainnet.arc.io` |
+| Variable                       | Value                                              |
+| ------------------------------ | -------------------------------------------------- |
+| `NEXT_PUBLIC_CHAIN_ID`         | `5042` (required; other values fail the build)     |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS` | `0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2`       |
+| `SUPABASE_URL`                 | from Supabase                                      |
+| `SUPABASE_SERVICE_ROLE_KEY`    | from Supabase                                      |
+| `RPC_URL`                      | optional; defaults to `https://rpc.mainnet.arc.io` |
 
 3. Deploy, then test the live URL (see the checklist below). `NEXT_PUBLIC_` values are baked in at build time, so redeploy after changing them.
 
-## Known limitations (MVP)
-
-- Wallet support is limited to browser-injected wallets (MetaMask, Rabby, Coinbase Wallet extension, or a wallet app's in-app browser). WalletConnect isn't included.
-- A registry's details can't be edited after creation, because the hash is fixed onchain.
-- Display names aren't verified. Anyone can create a registry with the same title. Guests should use the link they were sent; the page also shows the owner's wallet address.
-- Contributor names and notes are unauthenticated. Anyone who knows a tx hash could submit the note first; the amount shown is always the verified onchain amount.
-- If the owner loses their wallet, nobody can withdraw that registry's funds. The recovery address can't touch them by design.
-- USDC itself is an upgradeable contract operated by Circle, a standard trust assumption for USDC on every chain.
-- The contract hasn't been professionally audited.
-
-## Arc Microgrants submission checklist
-
-- [x] `npm test` passes in `contracts/` (38 tests)
-- [x] Contract deployed to Arc Mainnet; address and tx hash in the table above
-- [x] Contract source verified (Sourcify exact match; the Arc explorer form doesn't offer 0.8.37 yet)
-- [x] Supabase schema applied; Vercel env vars set
-- [x] Live URL on Arc Mainnet: registry created and a real USDC contribution made from the app
-- [ ] Owner withdrawal from the live app
-- [x] Public GitHub repo with this README
-
 ### Onchain evidence (Arc Mainnet)
 
-| Step | Transaction |
-|---|---|
-| Deploy `GiftRegistry` | [`0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) |
-| Create registry #1 from the live app | [`0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1`](https://explorer.arc.io/tx/0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1) |
+| Step                                            | Transaction                                                                                                                                                           |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy `GiftRegistry`                           | [`0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46`](https://explorer.arc.io/tx/0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46) |
+| Create registry #1 from the live app            | [`0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1`](https://explorer.arc.io/tx/0x04087dc75fd465a4b02e8bde6f37255f362dda9014386b6df18b835f393f4ee1) |
 | Contribute 0.5 USDC to a gift from the live app | [`0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9`](https://explorer.arc.io/tx/0x3d95c661275d824978bee65aa4c87f131890eaa6bda4b88b858e1bf1c85651c9) |
-| Withdraw | _pending_ |
+| Withdraw                                        | _pending_                                                                                                                                                             |
