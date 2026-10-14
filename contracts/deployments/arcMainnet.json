@@ -1,0 +1,11 @@
+{
+  "chainId": 5042,
+  "contract": "GiftRegistry",
+  "address": "0x379FB29E1Db766202f07aeb9514Da5D62e89dEa2",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "recoveryAddress": "0x9ab5f22f366516925bf57de811a99455b5260357",
+  "deployer": "0x9ab5f22f366516925bf57de811a99455b5260357",
+  "txHash": "0xa83234f8e49bf3cfeff152ae77e1491b1257affaf74194037628739042e60e46",
+  "blockNumber": 25997066,
+  "deployedAt": "2026-10-14T23:01:20.353Z"
+}

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { chain, isTestnet } from "@/lib/config";
 import { useMyRegistries } from "@/lib/useRegistry";
 import { ConnectButton, useMounted } from "./ConnectButton";
 import { Logo } from "./Doodles";
@@ -32,11 +31,6 @@ export function Header({ tone }: { tone: "light" | "dark" }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
         <Link href="/" className="flex items-center gap-2" aria-label="Your Wish home">
           <Logo tone={dark || open ? "dark" : "light"} />
-          {isTestnet && (
-            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-xs font-semibold text-gold" title={`${chain.name}: test USDC only, no real money`}>
-              Testnet
-            </span>
-          )}
         </Link>
 
         <div className="hidden items-center gap-2 sm:flex">

@@ -134,9 +134,9 @@ npm run dev
 
 Import one of the Hardhat test private keys into a **separate test wallet profile**, and add network `http://127.0.0.1:8545` with chain ID 31337. Without Supabase keys, local dev stores data in `.data/dev-db.json`.
 
-## Testing on Arc Testnet (free USDC)
+## Testing contract changes on Arc Testnet (free USDC)
 
-Arc Testnet (chain ID `5042002`, explorer https://explorer.testnet.arc.io) behaves like Mainnet but uses free test USDC. USDC is at the same address, `0x3600…0000`.
+The web app runs on Arc Mainnet only (or the local Hardhat chain for development). Arc Testnet (chain ID `5042002`, explorer https://explorer.testnet.arc.io) is still useful for trying contract changes with free test USDC before deploying them to Mainnet. USDC is at the same address, `0x3600…0000`.
 
 1. Get test USDC at https://faucet.circle.com (choose Arc Testnet) for the deployer wallet and for a second "guest" wallet.
 2. Store your key and deploy:
@@ -146,8 +146,7 @@ Arc Testnet (chain ID `5042002`, explorer https://explorer.testnet.arc.io) behav
    npm run deploy:testnet
    npm run smoke:testnet
    ```
-   The deploy step writes the address to `deployments/arcTestnet.json`.
-3. In `.env.local`, set `NEXT_PUBLIC_CHAIN_ID=5042002` and `NEXT_PUBLIC_REGISTRY_ADDRESS=<address>`, then remove `NEXT_PUBLIC_USDC_ADDRESS` and `RPC_URL`. Run `npm run dev`. The header shows a **Testnet** badge.
+   The deploy step writes the address to `deployments/arcTestnet.json`, and the smoke test runs a real create, contribute and withdraw against it.
 
 ## Deploying to Arc Mainnet
 

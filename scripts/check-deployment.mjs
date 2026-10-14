@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { createPublicClient, http, formatUnits, parseAbi } from "viem";
 import { arc, arcTestnet } from "viem/chains";
 
-const name = process.argv[2] ?? "arcTestnet";
+const name = process.argv[2] ?? "arcMainnet";
 const chain = name === "arcMainnet" ? arc : arcTestnet;
 const d = JSON.parse(readFileSync(`contracts/deployments/${name}.json`, "utf8"));
 const client = createPublicClient({ chain, transport: http() });
